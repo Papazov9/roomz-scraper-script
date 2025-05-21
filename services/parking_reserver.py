@@ -13,6 +13,40 @@ from selenium.common.exceptions import (
 )
 
 
+def select_furthest_available_date(driver):
+    wait = WebDriverWait(driver, 10)
+
+    date_wrapper = wait.until(
+        EC.element_to_be_clickable((By.CSS_SELECTOR, "div.css-1tn2x14"))
+    )
+    driver.execute_script("arguments[0].scrollIntoView(true);", date_wrapper)
+    date_wrapper.click()
+
+    while True:
+        try:
+            driver.find_element(By.CSS_SELECTOR, "button[disabled].css-tkykqg")
+            break
+        except:
+            next_arrow = wait.until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, "button.css-tkykqg"))
+            )
+            driver.execute_script("arguments[0].scrollIntoView(true);", next_arrow)
+            next_arrow.click()
+            time.sleep(0.5)
+
+    available_days = driver.find_elements(
+        By.CSS_SELECTOR, "div.rmdp-day:not(.rmdp-disabled) .day"
+    )
+
+    if not available_days:
+        raise Exception("❌ No available days found in the calendar.")
+
+    last_day = available_days[-1]
+    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", last_day)
+    last_day.click()
+    print("✅ Clicked the furthest available day.")
+
+
 def reserve_parking(
     driver,
     building_name="BG - Plovdiv",
@@ -58,6 +92,12 @@ def reserve_parking(
         time.sleep(2)
     except Exception as e:
         raise Exception("Couldn't switch to list view", e)
+
+    try:
+        select_furthest_available_date(driver)
+        time.sleep(2)
+    except Exception as e:
+        raise Exception("Failed to select furthest available date. Error: " + str(e))
 
     find_available_parking_spot(driver, spot_prefix)
 
